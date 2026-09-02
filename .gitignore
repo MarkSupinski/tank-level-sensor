@@ -1,6 +1,10 @@
 # --- Real secrets (never commit) ---
 secrets.yaml
 
+# --- Python bytecode from ESPHome codegen ---
+__pycache__/
+*.pyc
+
 # --- ESPHome build artifacts ---
 .esphome/
 build/
