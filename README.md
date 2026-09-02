@@ -44,6 +44,10 @@ As liquid rises inside the tank, total electrical capacitance across the foil st
 
 ## 3. Circuit Diagram & Wiring Schematic
 
+Installation line drawing (see [`circuit-diagram.svg`](circuit-diagram.svg)):
+
+![](circuit-diagram.svg)
+
 ### ASCII Schematic
 
 ```text
