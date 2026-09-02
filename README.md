@@ -49,39 +49,26 @@ Installation line drawing (see [`circuit-diagram.svg`](circuit-diagram.svg)):
 
 ![](circuit-diagram.svg)
 
-### ASCII Schematic
+### Connection Summary
 
-```text
-                  12V MARINE HOUSE BANK (12.0V - 14.6V)
-                 +-------------------------------------+
-                 | (+12V)                       (GND)  |
-                 +---|----------------------------|----+
-                     |                            |
-           +---------v----------------------------v---------+
-           |     12V TO 5V DC-DC BUCK STEP-DOWN CONVERTER   |
-           +---------|----------------------------|---------+
-                     | (+5V)                      | (GND)
-                     |                            |
-              +------v----------------------------v------+
-              | ESP32-WROOM-32 DEVELOPMENT BOARD         |
-              |                                          |
-              |  GPIO4 (T0 Touch)                GND     |
-              +----|------------------------------|------+
-                   |                              |
-                   |                              |
-  BLACKWATER TANK  |                              |
- +-----------------|------------------------------|-----------------+
- |                 |                              |                 |
- |    |============|---|              |-----------|============|    |
- |    |  FOIL STRIP A  |              |   FOIL STRIP B         |    |
- |    |  (TOUCH SIGNAL)|              |   (COMMON GROUND)      |    |
- |    |                | <-- 1.5" --> |                        |    |
- |    |  30" Vertical  |     GAP      |   30" Vertical         |    |
- |    |================|              |========================|    |
- |                                                                  |
- |            [ Stuck to OUTSIDE of polyethylene wall ]             |
- +------------------------------------------------------------------+
+The authoritative drawing is the SVG line diagram above; this is the same wiring shown as text:
+
 ```
+12V Marine House Bank  (+12V / GND)
+  -> 12V->5V DC-DC Buck (LM2596): VIN+ gets +12V, VIN- gets GND
+       -> +5V  -> ESP32 VIN/5V
+       -> GND  -> ESP32 GND     (common ground: battery- = buck GND = ESP32 GND = FDC1004 GND)
+ESP32 (WROOM-32 Dev Board)
+  -> 3V3     -> FDC1004 VDD
+  -> GPIO21  -> FDC1004 SDA
+  -> GPIO22  -> FDC1004 SCL
+  -> GND     -> FDC1004 GND
+FDC1004 (I2C address 0x50)
+  -> CIN1    -> FOIL STRIP A  (signal, on the OUTSIDE of the tank)
+  -> SHLD    -> FOIL STRIP B  (driven shield, on the OUTSIDE of the tank)
+Tank: two ~30" foil strips, 1.5-2.0" gap, from ~1" above the floor to the 30" max level.
+```
+
 
 ### Pin Connectivity Summary
 1. **Buck Converter Input:** Connected to Marine House 12V (+12V Fuse Segment and Battery Ground).
