@@ -118,6 +118,7 @@ This project uses [ESPHome](https://esphome.io): a YAML configuration that the `
 | `components/fdc1004/` | Custom ESPHome external component (I²C driver) for the FDC1004 capacitance sensor. |
 | `circuit-diagram.svg` | Installation wiring line drawing (rendered in §3). |
 | `home-assistant/dashboard-tanks.yaml` | Example Home Assistant Lovelace dashboard for the four tanks. |
+| `home-assistant/automations-tanks.yaml` | Example alert automations (blackwater too full / fresh water too low). |
 
 ### Key configuration points
 
@@ -239,4 +240,7 @@ The default reports **once per minute**. Edit the `sample_interval` substitution
 
 ### Home Assistant dashboard
 A ready-made Lovelace dashboard is included at [`home-assistant/dashboard-tanks.yaml`](home-assistant/dashboard-tanks.yaml): four gauge cards (blackwater warns when **nearly full**, fresh water warns when **nearly empty**) plus a numeric readout. Import it in Home Assistant (Settings → Dashboards → Add dashboard → **From YAML**) and adjust the `sensor.*` IDs to match your entities if needed (e.g. `sensor.port_fresh_water_tank_level`).
+
+### Tank alerts
+Example alert automations are in [`home-assistant/automations-tanks.yaml`](home-assistant/automations-tanks.yaml): blackwater tanks alert when **≥ 90% full** (pump out) and fresh-water tanks when **≤ 10%** (refill). They post a persistent notification by default; swap the `persistent_notification.create` action for a `notify.mobile_app_<phone>` (or another) service to get a real push. Adjust the thresholds (`above`/`below`) and `sensor.*` IDs to taste.
 

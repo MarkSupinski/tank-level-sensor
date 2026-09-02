@@ -1,0 +1,92 @@
+# =============================================================================
+#  Home Assistant automations — Tank level alerts
+# =============================================================================
+#  BLACKWATER tanks: alert when nearly FULL  (>= 90%)  -> pump out.
+#  FRESH WATER tanks: alert when nearly EMPTY (<= 10%) -> refill.
+#
+#  Load:
+#   - Option A: add  `automation: !include home-assistant/automations-tanks.yaml`
+#     to your configuration.yaml, or
+#   - Option B: in Settings > Automations > Create Automation > three-dot menu,
+#     turn on "Show as YAML" and paste each block.
+#
+#  Entity IDs assume the naming in README §10. Adjust the sensor.* ids if you
+#  renamed the units.
+#
+#  By default this posts a PERSISTENT NOTIFICATION (always available). To send a
+#  real push, replace the persistent_notification.create action with e.g.:
+#      - action: notify.mobile_app_<your_phone>
+#        data: { title: "Tank Alert", message: "..." }
+# =============================================================================
+
+- id: tank_alert_blackwater
+  alias: "Tank alert — Blackwater nearly full"
+  description: Alert when a blackwater holding tank is nearly full (>= 90%).
+  mode: single
+
+  triggers:
+    - trigger: numeric_state
+      entity_id: sensor.port_blackwater_tank_level
+      above: 90
+      id: port_blackwater
+    - trigger: numeric_state
+      entity_id: sensor.starboard_blackwater_tank_level
+      above: 90
+      id: starboard_blackwater
+
+  conditions: []
+
+  actions:
+    - choose:
+        - conditions:
+            - condition: trigger
+              id: port_blackwater
+          sequence:
+            - action: persistent_notification.create
+              data:
+                title: "Blackwater Tank Alert"
+                message: "Port Blackwater tank is {{ states('sensor.port_blackwater_tank_level') }}% full — pump it out."
+        - conditions:
+            - condition: trigger
+              id: starboard_blackwater
+          sequence:
+            - action: persistent_notification.create
+              data:
+                title: "Blackwater Tank Alert"
+                message: "Starboard Blackwater tank is {{ states('sensor.starboard_blackwater_tank_level') }}% full — pump it out."
+
+- id: tank_alert_fresh_water
+  alias: "Tank alert — Fresh water nearly empty"
+  description: Alert when a fresh water tank is nearly empty (<= 10%).
+  mode: single
+
+  triggers:
+    - trigger: numeric_state
+      entity_id: sensor.port_fresh_water_tank_level
+      below: 10
+      id: port_fresh_water
+    - trigger: numeric_state
+      entity_id: sensor.starboard_fresh_water_tank_level
+      below: 10
+      id: starboard_fresh_water
+
+  conditions: []
+
+  actions:
+    - choose:
+        - conditions:
+            - condition: trigger
+              id: port_fresh_water
+          sequence:
+            - action: persistent_notification.create
+              data:
+                title: "Fresh Water Alert"
+                message: "Port fresh water tank is {{ states('sensor.port_fresh_water_tank_level') }}% full — refill."
+        - conditions:
+            - condition: trigger
+              id: starboard_fresh_water
+          sequence:
+            - action: persistent_notification.create
+              data:
+                title: "Fresh Water Alert"
+                message: "Starboard fresh water tank is {{ states('sensor.starboard_fresh_water_tank_level') }}% full — refill."
