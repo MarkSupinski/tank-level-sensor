@@ -1,0 +1,123 @@
+# ============================================================================
+#  Tank Level Sensor  —  ESPHome configuration
+# ============================================================================
+#  Compiled to native ESP32 firmware by the `esphome` CLI.
+#  See README.md for hardware, installation, flashing and calibration.
+#
+#  Secrets (Wi-Fi, fallback AP, API key) live in secrets.yaml (gitignored)
+#  and are referenced below with  !secret <name> .
+# ============================================================================
+
+substitutions:
+  device_name: "blackwater-tank-monitor"
+  device_comment: "Non-invasive SCAD TM1 Style Capacitive Blackwater Level Sensor"
+
+  # ---------------- CALIBRATION VALUES (edit after field calibration) --------
+  # Two-point calibration: record the steady-state raw reading when the tank
+  # is empty (cal_raw_empty) and at 100% full (cal_raw_full). See README §6.
+  cal_raw_empty: "300.0"   # raw capacitance at 0" (empty)
+  cal_raw_full: "750.0"    # raw capacitance at 30" (full)
+  cal_min_percent: "0.0"   # lower clamp
+  cal_max_percent: "100.0" # upper clamp
+
+  # Set to "true" to hide the raw diagnostic reading from Home Assistant
+  # once calibration is complete.
+  internal_raw: "false"
+
+  # --- Touch pad & sampling ---
+  touch_threshold: "1000"     # raw touch threshold (required when setup_mode is false)
+  sample_interval: "2s"       # how often to read the raw capacitance
+
+esphome:
+  name: ${device_name}
+  comment: ${device_comment}
+
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
+# --- Network Connectivity ---
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  # Fallback access point in case the Wi-Fi connection fails
+  ap:
+    ssid: !secret ap_ssid
+    password: !secret ap_password
+
+# --- Logging ---
+logger:
+  level: INFO
+
+# --- Native Home Assistant Integration ---
+api:
+  encryption:
+    key: !secret api_encryption_key
+
+# --- Over-The-Air Update Capability ---
+ota:
+  - platform: esphome
+
+# Makes the fallback Wi-Fi AP (above) usable for troubleshooting/config.
+captive_portal:
+
+# --- Hardware Capacitive Touch Configuration ---
+esp32_touch:
+  setup_mode: false
+  # Note: on current ESPHome the esp32_touch platform is a binary_sensor only
+  # (the old continuous-value `sensor: esp32_touch` platform was removed). We
+  # instantiate the touch pad as a binary_sensor on GPIO4 and read its raw value
+  # through the public get_value() method in a template sensor lambda below.
+
+binary_sensor:
+  # Touch pad T0 == GPIO4 -- used only as a handle to the raw touch reading.
+  - platform: esp32_touch
+    name: "Blackwater Tank Touch"
+    id: blackwater_touch
+    pin: GPIO4
+    threshold: ${touch_threshold}
+    internal: true   # hide the on/off state; we only consume get_value()
+
+sensor:
+  # Raw capacitance measurement -- reads the touch pad's raw value (see note above)
+  - platform: template
+    name: "Blackwater Tank Capacitance Raw"
+    id: raw_capacitance
+    internal: ${internal_raw}
+    update_interval: ${sample_interval}
+    lambda: |-
+      return (float) id(blackwater_touch).get_value();
+    filters:
+      # Sliding-window moving average to smooth liquid movement underway
+      - sliding_window_moving_average:
+          window_size: 15
+          send_every: 3
+    on_value:
+      # Recompute the level every time a (filtered) raw value is published,
+      # so the percentage tracks the tank promptly.
+      - sensor.template.publish:
+          id: blackwater_level_percent
+          state: !lambda |-
+            float raw = id(raw_capacitance).state;
+            float pct = ((raw - ${cal_raw_empty}) / (${cal_raw_full} - ${cal_raw_empty})) * 100.0;
+
+            // Clamp between the configured limits
+            if (pct < ${cal_min_percent}) return ${cal_min_percent};
+            if (pct > ${cal_max_percent}) return ${cal_max_percent};
+            return pct;
+
+  # Calibrated tank level percentage output (driven by the raw sensor above)
+  - platform: template
+    name: "Blackwater Tank Level"
+    id: blackwater_level_percent
+    unit_of_measurement: "%"
+    icon: "mdi:gauge"
+    accuracy_decimals: 1
+    state_class: "measurement"
+    # NOTE: ESPHome has no `device_class: fill` (removed); % still renders via unit_of_measurement.
+    update_interval: never   # published externally via sensor.template.publish
+
+text_sensor:
+  - platform: version
+    name: "Blackwater Monitor ESPHome Version"

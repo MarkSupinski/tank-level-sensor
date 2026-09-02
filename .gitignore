@@ -1,0 +1,12 @@
+# --- Real secrets (never commit) ---
+secrets.yaml
+
+# --- ESPHome build artifacts ---
+.esphome/
+build/
+*.build
+
+# --- OS / editor clutter ---
+.DS_Store
+*.swp
+*.tmp

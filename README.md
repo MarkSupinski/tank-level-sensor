@@ -103,92 +103,24 @@ As liquid rises inside the tank, total electrical capacitance across the foil st
 
 ## 5. Software Configuration (`esphome.yaml`)
 
-This complete `esphome.yaml` file defines the device configuration, reads the raw touch pin value, smooths signal fluctuations, and calculates percentage fill.
+This project uses [ESPHome](https://esphome.io): a YAML configuration that the `esphome` CLI compiles into a native ESP32 firmware binary. The config is split across two files:
 
-```yaml
-esphome:
-  name: blackwater-tank-monitor
-  comment: "Non-invasive SCAD TM1 Style Capacitive Blackwater Level Sensor"
+| File | Purpose |
+| :--- | :--- |
+| `esphome.yaml` | Canonical device configuration: board, Wi-Fi, API, OTA, touch sensor, smoothing, and the calibrated level calculation. |
+| `secrets.yaml` | Your real Wi-Fi credentials, fallback-AP credentials, and API encryption key. **Gitignored** — real secrets are never committed. |
 
-esp32:
-  board: esp32dev
-  framework:
-    type: arduino
+### Key configuration points
 
-# Network Connectivity
-wifi:
-  ssid: "YOUR_WIFI_SSID"
-  password: "YOUR_WIFI_PASSWORD"
+- **Sensor read:** `esp32_touch` on `GPIO4` (touch pad `T0`). On current ESPHome the touch platform ships as a `binary_sensor` only (the old continuous `sensor: esp32_touch` platform was removed), so we read its **raw value** through the public `get_value()` method inside a `template` sensor lambda (`update_interval: 2s`). The touch pad is exposed as a `binary_sensor` (`blackwater_touch`, hidden) purely as a handle to that raw reading.
+- **Slosh filtering:** `sliding_window_moving_average` (window `15`, send every `3`) on the raw reading smooths values while the boat/RV is moving.
+- **Level calculation:** a `template` sensor maps raw capacitance → 0–100% using the substitutions `cal_raw_empty` / `cal_raw_full`. It is driven from the raw sensor's `on_value` trigger so the level updates as soon as a filtered reading is published (no 60 s polling lag).
+- **Calibration** values are top-level `substitutions` in `esphome.yaml` for a one-line edit — no need to edit the C++ lambda (see §6).
+- **Reading direction:** on original ESP32 (v1), a larger capacitance (more liquid) **decreases** the raw touch value. Two-point calibration handles this automatically — just record the true values for empty and full.
+- **`device_class`:** ESPHome no longer exposes `device_class: fill`; the level is still presented as a percentage via `unit_of_measurement: %`.
+- **Fallback AP:** `wifi.ap` plus a `captive_portal:` so the hotspot is usable for troubleshooting if the main Wi-Fi drops.
 
-  # Fallback AP in case Wi-Fi connection fails
-  ap:
-    ssid: "Blackwater-Monitor-Fallback"
-    password: "fallbackpassword"
-
-logger:
-  level: INFO
-
-# Native Home Assistant Integration API
-api:
-  encryption:
-    key: "GENERATED_ENCRYPTION_KEY"
-
-# Over-The-Air Update Capability
-ota:
-  - platform: esphome
-
-# Hardware Capacitive Touch Configuration
-esp32_touch:
-  setup_mode: false
-
-sensor:
-  # Raw Capacitance Measurement Sensor
-  - platform: esp32_touch
-    name: "Blackwater Tank Capacitance Raw"
-    id: raw_capacitance
-    pin: GPIO4
-    threshold: 1000
-    update_interval: 2s
-    internal: false # Set to 'true' after completing calibration to hide from HA dashboard
-    filters:
-      # Sliding window moving average filter to smooth liquid movement underway
-      - sliding_window_moving_average:
-          window_size: 15
-          send_every: 3
-
-  # Calibrated Tank Level Percentage Output
-  - platform: template
-    name: "Blackwater Tank Level"
-    id: blackwater_level_percent
-    unit_of_measurement: "%"
-    icon: "mdi:gauge"
-    accuracy_decimals: 1
-    state_class: "measurement"
-    device_class: "fill"
-    lambda: |-
-      float raw = id(raw_capacitance).state;
-
-      // CALIBRATION PARAMETERS
-      // Replace raw_empty and raw_full with readings gathered during setup
-      const float raw_empty = 300.0; // Baseline capacitance reading at 0 inches (Empty)
-      const float raw_full  = 750.0; // Baseline capacitance reading at 30 inches (Full)
-
-      if (isnan(raw)) {
-        return {};
-      }
-
-      // Linear mapping equation
-      float pct = ((raw - raw_empty) / (raw_full - raw_empty)) * 100.0;
-
-      // Clamp output between 0.0% and 100.0%
-      if (pct < 0.0) return 0.0;
-      if (pct > 100.0) return 100.0;
-      return pct;
-
-text_sensor:
-  - platform: version
-    name: "Blackwater Monitor ESPHome Version"
-```
+> **Note:** the full config was once pasted inline in this README; it now lives **only** in `esphome.yaml` so the docs and repo cannot drift. The old inline version also hardcoded Wi-Fi credentials — the refactor moves those to `secrets.yaml`.
 
 ---
 
@@ -197,7 +129,7 @@ text_sensor:
 To map raw capacitance values accurately to $0\%	ext{--}100\%$ levels:
 
 1. **Initial Deployment:**
-   - Flash the ESP32 with `internal: false` set under `raw_capacitance` so raw values are visible in Home Assistant logs or dashboard.
+   - Ensure `internal_raw: "false"` in `esphome.yaml` so the raw value is visible in Home Assistant logs or dashboard.
 2. **Empty Tank Baseline (`raw_empty`):**
    - Pump out and completely flush the holding tank.
    - Allow liquid to settle. Record the steady-state reading of `Blackwater Tank Capacitance Raw` (e.g., `300.0`).
@@ -205,8 +137,8 @@ To map raw capacitance values accurately to $0\%	ext{--}100\%$ levels:
    - Fill the tank with fresh water to the 30-inch mark (100% capacity).
    - Record the steady-state reading of `Blackwater Tank Capacitance Raw` (e.g., `750.0`).
 4. **Firmware Update:**
-   - Update `raw_empty` and `raw_full` in the `lambda` section of the YAML code with your recorded values.
-   - Option: Set `internal: true` on `raw_capacitance` to hide the raw diagnostic sensor from Home Assistant.
+   - Update the `cal_raw_empty` and `cal_raw_full` substitutions at the top of `esphome.yaml` with your recorded values.
+   - Option: set `internal_raw: "true"` to hide the raw diagnostic sensor from Home Assistant.
    - Re-flash the ESP32 over-the-air (OTA).
 
 ---
@@ -216,3 +148,39 @@ To map raw capacitance values accurately to $0\%	ext{--}100\%$ levels:
 - **Inverted Values / No Response:** Ensure the ground wire of the buck converter and ESP32 GND share a unified reference with the house battery system.
 - **Drift or Thermal Noise:** Capacitance readings fluctuate slightly with temperature. Ensure foil tape is sealed well against humidity and moisture ingress using silicone or conformal coating.
 - **Sloshing Sensitivity:** Increase `window_size` in the `sliding_window_moving_average` filter (e.g., from `15` to `30`) if boat movement causes erratic readings while underway.
+
+---
+
+## 8. Developer Workflow — Build, Flash & Calibrate
+
+### Prerequisites
+
+- [ESPHome](https://esphome.io) installed locally (Docker or `pip install esphome`).
+- One initial flash over USB, so Over-The-Air (OTA) updates work afterward.
+- A filled-in `secrets.yaml` (this file is gitignored).
+
+### 1. Set up your secrets
+Edit `secrets.yaml` and fill in your real values:
+
+- `wifi_ssid` / `wifi_password` — your 2.4 GHz Wi-Fi network.
+- `ap_ssid` / `ap_password` — the fallback hotspot the device exposes if it can't join the network.
+- `api_encryption_key` — generate one with `openssl rand -base64 32`.
+
+### 2. Compile
+```bash
+esphome compile esphome.yaml
+```
+
+### 3. Flash over USB (first time)
+```bash
+esphome run esphome.yaml
+```
+
+### 4. Update over-the-air (after the initial USB flash)
+```bash
+esphome upload esphome.yaml
+```
+
+### 5. Calibrate (see §6)
+With `internal_raw: "false"`, note the steady-state raw value when the tank is empty and when full. Enter those into `cal_raw_empty` / `cal_raw_full` at the top of `esphome.yaml`, re-flash, then set `internal_raw: "true"` to hide the raw reading from Home Assistant once calibrated.
+
