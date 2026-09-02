@@ -107,6 +107,9 @@ This project uses [ESPHome](https://esphome.io): a YAML configuration that the `
 | `pinout-fdc1004.svg` | FDC1004 pin-number diagram (10-pin TSSOP/VSSOP). |
 | `pinout-esp32.svg` | ESP32 dev-board relevant-pin diagram. |
 | `pinout-buck.svg` | Buck converter (LM2596 module) terminal diagram. |
+| `pcb/BOM.md` | Bill of materials (parts list) for the PCB. |
+| `pcb/DESIGN.md` | PCB netlist, layout notes and Gerber/PCBWay workflow. |
+| `pcb/schematic.svg` | PCB block schematic (5V-input sensor board). |
 | `home-assistant/dashboard-tanks.yaml` | Example Home Assistant Lovelace dashboard for the four tanks. |
 | `home-assistant/automations-tanks.yaml` | Example alert automations (blackwater too full / fresh water too low). |
 
@@ -280,4 +283,17 @@ Pin diagrams to verify connections before wiring (SVG files are in the repo root
 | OUT− | ESP32 GND (common ground) |
 
 > Raw LM2596 IC (TO-220-5): 1=VIN, 2=OUT, 3=GND, 4=FB, 5=ON/OFF.
+
+
+---
+
+## 12. PCB Design & Parts List
+
+A PCB design package (a compact **5 V-input sensor board** with the ESP32-WROOM-32E + TI FDC1004) is in the [`pcb/`](pcb/) folder:
+
+- **`pcb/BOM.md`** — full parts list (bill of materials) with reference designators and suggested part numbers.
+- **`pcb/DESIGN.md`** — netlist, KiCad setup, PCB layout rules (including guarding the `CIN1` trace), Gerber export, and the PCBWay upload + assembly steps.
+- **`pcb/schematic.svg`** — block schematic.
+
+> I can't emit final Gerbers directly via this repo (that needs EDA software). This package has everything to produce them in minutes in free **KiCad**, then upload the Gerber `.zip` to **PCBWay** — bare board or with SMT assembly. On this board rev the 12V→5V buck stays an external module (as in §3); a second rev could add an on-board regulator.
 
