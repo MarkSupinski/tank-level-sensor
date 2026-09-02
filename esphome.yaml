@@ -9,8 +9,12 @@
 # ============================================================================
 
 substitutions:
-  device_name: "blackwater-tank-monitor"
-  device_comment: "Non-invasive SCAD TM1 Style Capacitive Blackwater Level Sensor"
+  # ----- Unit identity (IMPORTANT: set uniquely per tank) -----
+  # For 4 tanks, give each unit a distinct device_name + friendly_name so they are
+  # distinguishable in Home Assistant. See README "Multiple tanks (4 units)".
+  device_name: "port-blackwater-monitor"
+  friendly_name: "Port Blackwater Tank"
+  device_comment: "Non-invasive SCAD TM1 Style Capacitive Tank Level Sensor"
 
   # ---------------- CALIBRATION VALUES (edit after field calibration) --------
   # Two-point calibration: record the steady-state raw reading when the tank
@@ -27,7 +31,7 @@ substitutions:
   # --- FDC1004 (I2C capacitance-to-digital converter) ---
   fdc_channel: "1"            # CIN1..CIN4 electrode
   fdc_capdac: "0"             # offset DAC 0-31; raise if the raw reading saturates at the limits
-  sample_interval: "5s"       # how often to read the capacitance
+  sample_interval: "60s"      # how often to read + report the level (once per minute)
 
 esphome:
   name: ${device_name}
@@ -84,17 +88,17 @@ fdc1004:
 sensor:
   # Raw capacitance measurement from the FDC1004
   - platform: fdc1004
-    name: "Blackwater Tank Capacitance Raw"
+    name: "${friendly_name} Capacitance Raw"
     id: raw_capacitance
     channel: ${fdc_channel}
     capdac: ${fdc_capdac}
     internal: ${internal_raw}
     update_interval: ${sample_interval}
     filters:
-      # Sliding-window moving average to smooth liquid movement underway
+      # Light smoothing (average of the last 5 readings), reported once per minute
       - sliding_window_moving_average:
-          window_size: 15
-          send_every: 3
+          window_size: 5
+          send_every: 1
     on_value:
       # Recompute the level every time a (filtered) raw value is published
       - sensor.template.publish:
@@ -110,7 +114,7 @@ sensor:
 
   # Calibrated tank level percentage output (driven by the raw sensor above)
   - platform: template
-    name: "Blackwater Tank Level"
+    name: "${friendly_name} Level"
     id: blackwater_level_percent
     unit_of_measurement: "%"
     icon: "mdi:gauge"
@@ -121,4 +125,4 @@ sensor:
 
 text_sensor:
   - platform: version
-    name: "Blackwater Monitor ESPHome Version"
+    name: "${friendly_name} ESPHome Version"

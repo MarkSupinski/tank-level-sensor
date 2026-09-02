@@ -140,10 +140,10 @@ To map raw capacitance values accurately to $0\%	ext{--}100\%$ levels:
    - Ensure `internal_raw: "false"` in `esphome.yaml` so the raw value is visible in Home Assistant logs or dashboard.
 2. **Empty Tank Baseline (`raw_empty`):**
    - Pump out and completely flush the holding tank.
-   - Allow liquid to settle. Record the steady-state reading of `Blackwater Tank Capacitance Raw` (e.g., `300.0`).
+   - Allow liquid to settle. Record the steady-state reading of the `Capacitance Raw` sensor (e.g., `300.0`).
 3. **Full Tank Baseline (`raw_full`):**
    - Fill the tank with fresh water to the 30-inch mark (100% capacity).
-   - Record the steady-state reading of `Blackwater Tank Capacitance Raw` (e.g., `750.0`).
+   - Record the steady-state reading of the `Capacitance Raw` sensor (e.g., `750.0`).
 4. **Firmware Update:**
    - Update the `cal_raw_empty` and `cal_raw_full` substitutions at the top of `esphome.yaml` with your recorded values.
    - Option: set `internal_raw: "true"` to hide the raw diagnostic sensor from Home Assistant.
@@ -191,4 +191,48 @@ esphome upload esphome.yaml
 
 ### 5. Calibrate (see §6)
 With `internal_raw: "false"`, note the steady-state raw value when the tank is empty and when full. Enter those into `cal_raw_empty` / `cal_raw_full` at the top of `esphome.yaml`, re-flash, then set `internal_raw: "true"` to hide the raw reading from Home Assistant once calibrated.
+
+---
+
+## 9. Hardware Bring-up / Smoke Test
+
+Run this on the bench (or at install) once the FDC1004 + foils are wired, before relying on it in service:
+
+1. **Flash over USB** with `esphome run esphome.yaml`.
+2. **Watch the boot logs** (`esphome logs esphome.yaml` or the serial monitor). You should see **`FDC1004 found on I2C`**. If you instead see **`FDC1004 not responding on I2C`**: check the I²C wiring (SDA/SCL), the 3.3V supply, and that the address matches (`0x50`). You can also set `i2c: scan: true` to list detected devices.
+3. **Confirm the raw sensor appears in Home Assistant** as `<friendly_name> Capacitance Raw` and updates about **once per minute**.
+4. **Reactivity check** — bring your hand near **Foil Strip A**; the raw value should move clearly. **Foil Strip B** (SHLD) should stay relatively stable — that's the driven shield working. If touching the *leads* also shifts the reading strongly, improve shielding / moisture-proofing.
+5. **Check for saturation** — the raw reading must **not** peg at the ±limits. If it saturates, raise the `fdc_capdac` substitution (0–31) until the reading sits comfortably mid-range.
+6. **Calibrate** empty/full (§6) and confirm `<friendly_name> Level` reads ≈0% empty and ≈100% full.
+7. **Verify OTA** — from then on `esphome upload esphome.yaml` updates without a cable.
+
+> If the reading is unstable or drifts, re-seal the foil solder joints and foil edges (liquid tape / conformal coating). Moisture is the #1 cause of drift.
+
+---
+
+## 10. Multiple tanks (4 units)
+
+Each tank gets its own ESP32 + FDC1004 unit. (The FDC1004 also has 4 input channels if you'd rather run four foils off one board — but one unit per tank is the simplest, most robust approach.) To keep them **distinguishable in Home Assistant**, each unit just needs a unique `device_name` + `friendly_name` in `substitutions` (top of `esphome.yaml`):
+
+| Tank | `device_name` | `friendly_name` |
+| :--- | :--- | :--- |
+| Port Blackwater | `port-blackwater-monitor` | `Port Blackwater Tank` |
+| Port Fresh Water | `port-fresh-water-monitor` | `Port Fresh Water Tank` |
+| Starboard Blackwater | `starboard-blackwater-monitor` | `Starboard Blackwater Tank` |
+| Starboard Fresh Water | `starboard-fresh-water-monitor` | `Starboard Fresh Water Tank` |
+
+The config is already set for **Port Blackwater**. For each additional unit, copy `esphome.yaml`, change those two lines, and flash (USB first, then OTA). Entities in Home Assistant then appear as:
+
+- `<friendly_name> Level` (%) — the tank fill
+- `<friendly_name> Capacitance Raw` (diagnostic; hide with `internal_raw: "true"` after calibration)
+- `<friendly_name> ESPHome Version`
+
+**Per-unit notes:**
+- Each unit can join the same Wi-Fi network (`secrets.yaml`).
+- Give each unit a **distinct `api_encryption_key`** in its own `secrets.yaml` (`openssl rand -base64 32`).
+- Keep `fdc_channel` at `1` for each unit, and calibrate `cal_raw_empty` / `cal_raw_full` for that tank.
+- Physically label each ESP32 unit so you know which foil set goes with which tank.
+
+### Change the update rate
+The default reports **once per minute**. Edit the `sample_interval` substitution (e.g. `"30s"` for 30 s, or `"120s"` for every 2 min). The `sliding_window_moving_average` filter then averages the last 5 samples and publishes on that cadence.
 
