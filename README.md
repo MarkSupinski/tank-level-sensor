@@ -104,6 +104,9 @@ This project uses [ESPHome](https://esphome.io): a YAML configuration that the `
 | `secrets.yaml` | Your real Wi-Fi credentials, fallback-AP credentials, and API encryption key. **Gitignored** — real secrets are never committed. |
 | `components/fdc1004/` | Custom ESPHome external component (I²C driver) for the FDC1004 capacitance sensor. |
 | `circuit-diagram.svg` | Installation wiring line drawing (rendered in §3). |
+| `pinout-fdc1004.svg` | FDC1004 pin-number diagram (10-pin TSSOP/VSSOP). |
+| `pinout-esp32.svg` | ESP32 dev-board relevant-pin diagram. |
+| `pinout-buck.svg` | Buck converter (LM2596 module) terminal diagram. |
 | `home-assistant/dashboard-tanks.yaml` | Example Home Assistant Lovelace dashboard for the four tanks. |
 | `home-assistant/automations-tanks.yaml` | Example alert automations (blackwater too full / fresh water too low). |
 
@@ -230,4 +233,51 @@ A ready-made Lovelace dashboard is included at [`home-assistant/dashboard-tanks.
 
 ### Tank alerts
 Example alert automations are in [`home-assistant/automations-tanks.yaml`](home-assistant/automations-tanks.yaml): blackwater tanks alert when **≥ 90% full** (pump out) and fresh-water tanks when **≤ 10%** (refill). They post a persistent notification by default; swap the `persistent_notification.create` action for a `notify.mobile_app_<phone>` (or another) service to get a real push. Adjust the thresholds (`above`/`below`) and `sensor.*` IDs to taste.
+
+
+---
+
+## 11. Pinout Reference
+
+Pin diagrams to verify connections before wiring (SVG files are in the repo root).
+
+### FDC1004 (10-pin VSSOP / TSSOP "DGS") — [`pinout-fdc1004.svg`](pinout-fdc1004.svg)
+
+| Pin | Name | Connect to (this project) |
+| :--- | :--- | :--- |
+| 1 | SHLD | Foil Strip B (shield) |
+| 2 | CIN1 | Foil Strip A (signal) |
+| 3 | CIN2 | — |
+| 4 | CIN3 | — |
+| 5 | CIN4 | — |
+| 6 | SHLD | Foil Strip B (alternate shield pin) |
+| 7 | GND | common ground |
+| 8 | VDD | ESP32 3V3 |
+| 9 | SCL | ESP32 GPIO22 |
+| 10 | SDA | ESP32 GPIO21 |
+
+> Pins 1 and 6 are both SHLD — use either (or both). I²C address is 0x50; add 4.7k pull-ups on SDA/SCL. Verify pin-1 orientation against the chip's dot.
+
+### ESP32-WROOM-32 dev board — [`pinout-esp32.svg`](pinout-esp32.svg)
+
+| Board pin | Connect to |
+| :--- | :--- |
+| 3V3 | FDC1004 VDD (pin 8) |
+| GND | FDC1004 GND (pin 7), buck OUT−, battery ground |
+| VIN/5V | buck OUT+ |
+| GPIO21 (SDA) | FDC1004 SDA (pin 10) |
+| GPIO22 (SCL) | FDC1004 SCL (pin 9) |
+
+> Header positions vary by board — match the silkscreen label. GPIO21/GPIO22 are the default I²C pins.
+
+### Buck converter (LM2596 module) — [`pinout-buck.svg`](pinout-buck.svg)
+
+| Module terminal | Connect to |
+| :--- | :--- |
+| IN+ | +12V (marine house bank) |
+| IN− | battery / bank GND |
+| OUT+ | ESP32 VIN/5V |
+| OUT− | ESP32 GND (common ground) |
+
+> Raw LM2596 IC (TO-220-5): 1=VIN, 2=OUT, 3=GND, 4=FB, 5=ON/OFF.
 

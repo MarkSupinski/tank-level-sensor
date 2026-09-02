@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 430" font-family="Helvetica, Arial, sans-serif">
+  <rect x="0" y="0" width="720" height="430" fill="#ffffff"/>
+  <style>
+    .body{fill:#ffffff;stroke:#111;stroke-width:2}
+    .pin{stroke:#111;stroke-width:2}
+    .lbl{font-size:13px;fill:#111}
+    .lbl-s{font-size:11px;fill:#444}
+    .lbl-b{font-size:14px;fill:#111;font-weight:bold}
+  </style>
+  <text x="20" y="26" class="lbl-b">12V to 5V DC-DC Buck Converter (LM2596 module)</text>
+  <text x="20" y="44" class="lbl-s">Module terminals (usually labelled IN+/OUT+). Check your module's silkscreen if the labels differ.</text>
+
+  <!-- module -->
+  <rect x="200" y="90" width="300" height="160" class="body" rx="8"/>
+  <text x="350" y="120" text-anchor="middle" class="lbl-b">Buck Module</text>
+  <text x="350" y="138" text-anchor="middle" class="lbl-s">(LM2596)</text>
+
+  <!-- input terminals (left) -->
+  <line x1="160" y1="130" x2="200" y2="130" class="pin"/><circle cx="200" cy="130" r="5" fill="#111"/><text x="150" y="134" text-anchor="end" class="lbl">IN+</text>
+  <line x1="160" y1="210" x2="200" y2="210" class="pin"/><circle cx="200" cy="210" r="5" fill="#111"/><text x="150" y="214" text-anchor="end" class="lbl">IN&#8722;</text>
+
+  <!-- output terminals (right) -->
+  <line x1="500" y1="130" x2="540" y2="130" class="pin"/><circle cx="500" cy="130" r="5" fill="#111"/><text x="545" y="134" class="lbl">OUT+</text>
+  <line x1="500" y1="210" x2="540" y2="210" class="pin"/><circle cx="500" cy="210" r="5" fill="#111"/><text x="545" y="214" class="lbl">OUT&#8722;</text>
+
+  <!-- connections -->
+  <text x="20" y="290" class="lbl-b">Module wiring:</text>
+  <text x="20" y="312" class="lbl">IN+  &#8594;  +12V (marine house bank)      IN&#8722;  &#8594;  battery/bank GND</text>
+  <text x="20" y="334" class="lbl">OUT+ &#8594;  ESP32 VIN/5V                  OUT&#8722; &#8594;  ESP32 GND (common ground)</text>
+
+  <!-- raw LM2596 IC -->
+  <text x="20" y="366" class="lbl-b">Raw LM2596 IC (TO-220-5) pinout:</text>
+  <text x="20" y="388" class="lbl-s">1=VIN &#160; 2=OUT &#160; 3=GND &#160; 4=FB (feedback) &#160; 5=ON/OFF</text>
+</svg>

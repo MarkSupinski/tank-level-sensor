@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 430" font-family="Helvetica, Arial, sans-serif">
+  <rect x="0" y="0" width="720" height="430" fill="#ffffff"/>
+  <style>
+    .body{fill:#ffffff;stroke:#111;stroke-width:2}
+    .pin{stroke:#111;stroke-width:2}
+    .lbl{font-size:13px;fill:#111}
+    .lbl-s{font-size:11px;fill:#444}
+    .lbl-b{font-size:14px;fill:#111;font-weight:bold}
+  </style>
+  <text x="20" y="26" class="lbl-b">ESP32-WROOM-32 Dev Board — pins used</text>
+  <text x="20" y="44" class="lbl-s">Header layout varies by board: match these to the silkscreen labels. GPIO21/22 are the default I2C pins.</text>
+
+  <!-- board -->
+  <rect x="250" y="70" width="300" height="220" class="body" rx="10"/>
+  <text x="400" y="95" text-anchor="middle" class="lbl-b">ESP32-WROOM-32</text>
+  <text x="400" y="113" text-anchor="middle" class="lbl-s">Dev Board</text>
+
+  <!-- Left pins -->
+  <line x1="210" y1="150" x2="250" y2="150" class="pin"/><circle cx="250" cy="150" r="4" fill="#111"/><text x="205" y="154" text-anchor="end" class="lbl">3V3</text>
+  <line x1="210" y1="190" x2="250" y2="190" class="pin"/><circle cx="250" cy="190" r="4" fill="#111"/><text x="205" y="194" text-anchor="end" class="lbl">GND</text>
+  <line x1="210" y1="230" x2="250" y2="230" class="pin"/><circle cx="250" cy="230" r="4" fill="#111"/><text x="205" y="234" text-anchor="end" class="lbl">VIN/5V</text>
+  <line x1="210" y1="270" x2="250" y2="270" class="pin"/><circle cx="250" cy="270" r="4" fill="#111"/><text x="205" y="274" text-anchor="end" class="lbl">GPIO21 (SDA)</text>
+
+  <!-- Right pins -->
+  <line x1="550" y1="150" x2="590" y2="150" class="pin"/><circle cx="550" cy="150" r="4" fill="#111"/><text x="595" y="154" class="lbl">GPIO22 (SCL)</text>
+  <line x1="550" y1="190" x2="590" y2="190" class="pin"/><circle cx="550" cy="190" r="4" fill="#111"/><text x="595" y="194" class="lbl">GND</text>
+
+  <!-- Function callouts -->
+  <text x="20" y="320" class="lbl-b">Connect:</text>
+  <text x="20" y="342" class="lbl">3V3      &#8594;  FDC1004 VDD  (pin 8)</text>
+  <text x="20" y="362" class="lbl">GND      &#8594;  FDC1004 GND  (pin 7)</text>
+  <text x="20" y="382" class="lbl">VIN/5V   &#8594;  buck converter +5V</text>
+  <text x="20" y="402" class="lbl">GPIO21   &#8594;  FDC1004 SDA  (pin 10)</text>
+  <text x="20" y="422" class="lbl">GPIO22   &#8594;  FDC1004 SCL  (pin 9)</text>
+</svg>

@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 360" font-family="Helvetica, Arial, sans-serif">
+  <rect x="0" y="0" width="560" height="360" fill="#ffffff"/>
+  <style>
+    .body{fill:#ffffff;stroke:#111;stroke-width:2}
+    .pin{stroke:#111;stroke-width:2}
+    .lbl{font-size:13px;fill:#111}
+    .lbl-s{font-size:11px;fill:#444}
+    .lbl-b{font-size:14px;fill:#111;font-weight:bold}
+  </style>
+  <text x="20" y="26" class="lbl-b">FDC1004 — 10-pin VSSOP/TSSOP (Top View)</text>
+  <text x="20" y="44" class="lbl-s">Also sold as TSSOP/MSOP-10. Pin 1 marked with a dot.</text>
+
+  <!-- IC body -->
+  <rect x="190" y="60" width="160" height="240" class="body"/>
+  <circle cx="200" cy="70" r="5" fill="#111"/>
+
+  <!-- Left pins 1-5 -->
+  <line x1="165" y1="95" x2="190" y2="95" class="pin"/><text x="170" y="89" class="lbl">1</text><text x="196" y="99" class="lbl">SHLD</text>
+  <line x1="165" y1="140" x2="190" y2="140" class="pin"/><text x="170" y="134" class="lbl">2</text><text x="196" y="144" class="lbl">CIN1</text>
+  <line x1="165" y1="185" x2="190" y2="185" class="pin"/><text x="170" y="179" class="lbl">3</text><text x="196" y="189" class="lbl">CIN2</text>
+  <line x1="165" y1="230" x2="190" y2="230" class="pin"/><text x="170" y="224" class="lbl">4</text><text x="196" y="234" class="lbl">CIN3</text>
+  <line x1="165" y1="275" x2="190" y2="275" class="pin"/><text x="170" y="269" class="lbl">5</text><text x="196" y="279" class="lbl">CIN4</text>
+
+  <!-- Right pins 6-10 (bottom to top) -->
+  <line x1="350" y1="275" x2="375" y2="275" class="pin"/><text x="356" y="269" class="lbl">6</text><text x="344" y="279" text-anchor="end" class="lbl">SHLD</text>
+  <line x1="350" y1="230" x2="375" y2="230" class="pin"/><text x="356" y="224" class="lbl">7</text><text x="344" y="234" text-anchor="end" class="lbl">GND</text>
+  <line x1="350" y1="185" x2="375" y2="185" class="pin"/><text x="356" y="179" class="lbl">8</text><text x="344" y="189" text-anchor="end" class="lbl">VDD</text>
+  <line x1="350" y1="140" x2="375" y2="140" class="pin"/><text x="356" y="134" class="lbl">9</text><text x="344" y="144" text-anchor="end" class="lbl">SCL</text>
+  <line x1="350" y1="95" x2="375" y2="95" class="pin"/><text x="356" y="89" class="lbl">10</text><text x="344" y="99" text-anchor="end" class="lbl">SDA</text>
+
+  <!-- Connection notes -->
+  <text x="20" y="316" class="lbl-b">Connect for this project:</text>
+  <text x="20" y="336" class="lbl">Foil A &#8594; CIN1 (pin 2)   &#160;|&#160;   Foil B &#8594; SHLD (pin 1 or 6)</text>
+  <text x="20" y="353" class="lbl-s">VDD=pin8 (3.3V) &#160; GND=pin7 &#160; SCL=pin9 &#160; SDA=pin10 &#160; (I2C addr 0x50)</text>
+</svg>
