@@ -1,0 +1,75 @@
+# =============================================================================
+#  Home Assistant dashboard — Tank Levels (4 tanks)
+# =============================================================================
+#  Import this in Home Assistant:
+#    Settings > Dashboards > "Add dashboard" > "From YAML", and paste this file.
+#    (Or copy the card blocks into an existing dashboard.)
+#
+#  Entity IDs assume the naming in README §10 (friendly_name + " Level").
+#  If you renamed units, change the sensor.* ids below to match yours:
+#    e.g. <friendly_name>=Port Fresh Water -> sensor.port_fresh_water_tank_level
+#
+#  Note: severity colouring is set so BLACKWATER warns when NEARLY FULL and
+#  FRESH WATER warns when NEARLY EMPTY.
+# =============================================================================
+
+title: Tank Levels
+views:
+  - title: Tanks
+    path: tanks
+    icon: mdi:water
+    cards:
+      # ---- Gauge cards (one per tank) ----
+      - type: grid
+        columns: 2
+        square: false
+        cards:
+          - type: gauge
+            name: Port Blackwater
+            entity: sensor.port_blackwater_tank_level
+            min: 0
+            max: 100
+            severity:
+              green: 0
+              yellow: 80   # warn as it nears full (needs pumping)
+              red: 95
+          - type: gauge
+            name: Port Fresh Water
+            entity: sensor.port_fresh_water_tank_level
+            min: 0
+            max: 100
+            severity:
+              green: 0
+              yellow: 25   # warn as it nears empty
+              red: 10
+          - type: gauge
+            name: Starboard Blackwater
+            entity: sensor.starboard_blackwater_tank_level
+            min: 0
+            max: 100
+            severity:
+              green: 0
+              yellow: 80
+              red: 95
+          - type: gauge
+            name: Starboard Fresh Water
+            entity: sensor.starboard_fresh_water_tank_level
+            min: 0
+            max: 100
+            severity:
+              green: 0
+              yellow: 25
+              red: 10
+
+      # ---- Numeric readout of all four in one row ----
+      - type: entities
+        title: Levels (numeric)
+        entities:
+          - entity: sensor.port_blackwater_tank_level
+            name: Port Blackwater
+          - entity: sensor.port_fresh_water_tank_level
+            name: Port Fresh Water
+          - entity: sensor.starboard_blackwater_tank_level
+            name: Starboard Blackwater
+          - entity: sensor.starboard_fresh_water_tank_level
+            name: Starboard Fresh Water
