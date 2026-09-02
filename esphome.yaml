@@ -24,9 +24,10 @@ substitutions:
   # once calibration is complete.
   internal_raw: "false"
 
-  # --- Touch pad & sampling ---
-  touch_threshold: "1000"     # raw touch threshold (required when setup_mode is false)
-  sample_interval: "2s"       # how often to read the raw capacitance
+  # --- FDC1004 (I2C capacitance-to-digital converter) ---
+  fdc_channel: "1"            # CIN1..CIN4 electrode
+  fdc_capdac: "0"             # offset DAC 0-31; raise if the raw reading saturates at the limits
+  sample_interval: "5s"       # how often to read the capacitance
 
 esphome:
   name: ${device_name}
@@ -36,6 +37,19 @@ esp32:
   board: esp32dev
   framework:
     type: arduino
+
+# --- Custom FDC1004 component (ships with this repo; no third-party dependency) ---
+external_components:
+  - source:
+      type: local
+      path: components
+    components: [fdc1004]
+
+# --- I2C bus to the FDC1004 ---
+i2c:
+  sda: GPIO21
+  scl: GPIO22
+  scan: false
 
 # --- Network Connectivity ---
 wifi:
@@ -62,40 +76,27 @@ ota:
 # Makes the fallback Wi-Fi AP (above) usable for troubleshooting/config.
 captive_portal:
 
-# --- Hardware Capacitive Touch Configuration ---
-esp32_touch:
-  setup_mode: false
-  # Note: on current ESPHome the esp32_touch platform is a binary_sensor only
-  # (the old continuous-value `sensor: esp32_touch` platform was removed). We
-  # instantiate the touch pad as a binary_sensor on GPIO4 and read its raw value
-  # through the public get_value() method in a template sensor lambda below.
-
-binary_sensor:
-  # Touch pad T0 == GPIO4 -- used only as a handle to the raw touch reading.
-  - platform: esp32_touch
-    name: "Blackwater Tank Touch"
-    id: blackwater_touch
-    pin: GPIO4
-    threshold: ${touch_threshold}
-    internal: true   # hide the on/off state; we only consume get_value()
+# --- FDC1004 capacitance sensor (CIN1 -> Foil A, SHLD -> Foil B) ---
+fdc1004:
+  id: fdc1004_hub
+  address: 0x50
 
 sensor:
-  # Raw capacitance measurement -- reads the touch pad's raw value (see note above)
-  - platform: template
+  # Raw capacitance measurement from the FDC1004
+  - platform: fdc1004
     name: "Blackwater Tank Capacitance Raw"
     id: raw_capacitance
+    channel: ${fdc_channel}
+    capdac: ${fdc_capdac}
     internal: ${internal_raw}
     update_interval: ${sample_interval}
-    lambda: |-
-      return (float) id(blackwater_touch).get_value();
     filters:
       # Sliding-window moving average to smooth liquid movement underway
       - sliding_window_moving_average:
           window_size: 15
           send_every: 3
     on_value:
-      # Recompute the level every time a (filtered) raw value is published,
-      # so the percentage tracks the tank promptly.
+      # Recompute the level every time a (filtered) raw value is published
       - sensor.template.publish:
           id: blackwater_level_percent
           state: !lambda |-

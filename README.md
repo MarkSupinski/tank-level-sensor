@@ -19,7 +19,7 @@ Two parallel conductive foil strips are adhered vertically to the **outside wall
 - **Empty Tank:** Air inside the tank yields a lower dielectric constant ($\epsilon_r pprox 1$).
 - **Full Tank:** Water and organic waste behind the foil yield a significantly higher dielectric constant ($\epsilon_r pprox 80$).
 
-As liquid rises inside the tank, total electrical capacitance across the foil strips increases linearly. The ESP32's internal touch-sensing peripheral (`esp32_touch`) directly measures this capacitance without requiring external Analog-to-Digital Converters (ADCs) or voltage dividers.
+As liquid rises inside the tank, total electrical capacitance across the foil strips increases linearly. A **TI FDC1004** capacitance-to-digital converter (over I²C) measures this capacitance directly, giving a stable reading without requiring external Analog-to-Digital Converters (ADCs) or voltage dividers.
 
 ---
 
@@ -28,7 +28,8 @@ As liquid rises inside the tank, total electrical capacitance across the foil st
 ### Primary Components
 | Component | Specification / Recommendation | Purpose |
 | :--- | :--- | :--- |
-| **Microcontroller** | ESP32-WROOM-32 Development Board | Reads capacitive pin (GPIO4) & runs ESPHome firmware |
+| **Microcontroller** | ESP32-WROOM-32 Development Board | Runs ESPHome firmware; hosts the I²C capacitance sensor |
+| **Capacitance Sensor** | TI FDC1004 (I²C, address 0x50) | Measures foil capacitance to digital: CIN1 + driven SHLD shield |
 | **Power Supply** | 12V-to-5V DC-DC Buck Converter (e.g., LM2596 or marine USB module) | Steps down marine house battery bank (12V/24V) to clean 5V USB/VIN |
 | **Sensor Tape** | 2-inch wide Copper Foil Tape (conductive adhesive) or HVAC Aluminum Foil Tape | External capacitive sensing electrodes |
 | **Wiring** | 20–22 AWG Stranded Marine-Grade Copper Wire | Connections from foil strips to ESP32 board |
@@ -37,8 +38,8 @@ As liquid rises inside the tank, total electrical capacitance across the foil st
 ### System Specifications
 - **Tank Depth:** 30 inches (76.2 cm) nominal depth.
 - **Power Input:** 12V DC Marine House Battery Bank (nominal 12.0V – 14.6V range).
-- **Measurement Pin:** ESP32 GPIO4 (Internal Touch Channel `T0`).
-- **Grounding:** Shared common ground between 12V system, Buck Converter output, and ESP32 GND.
+- **Capacitance Sensing:** TI FDC1004 over I²C (SDA=GPIO21, SCL=GPIO22, address 0x50); Foil A → CIN1, Foil B → SHLD (driven shield).
+- **Grounding:** Shared common ground between the 12V system, buck converter output, ESP32 GND, and FDC1004 GND.
 
 ---
 
@@ -85,8 +86,9 @@ Installation line drawing (see [`circuit-diagram.svg`](circuit-diagram.svg)):
 ### Pin Connectivity Summary
 1. **Buck Converter Input:** Connected to Marine House 12V (+12V Fuse Segment and Battery Ground).
 2. **Buck Converter Output:** 5V output to **ESP32 VIN** pin; GND output to **ESP32 GND**.
-3. **Foil Strip A (Signal Electrode):** Soldered/tapped to wire leading directly to **ESP32 GPIO4**.
-4. **Foil Strip B (Ground Shield):** Soldered/tapped to wire leading directly to **ESP32 GND**.
+3. **Foil Strip A (Signal Electrode):** Wire to **FDC1004 CIN1**.
+4. **Foil Strip B (Shield Electrode):** Wire to **FDC1004 SHLD** (driven shield).
+5. **FDC1004 ↔ ESP32:** 3.3V, GND, SDA (GPIO21), SCL (GPIO22), with 4.7k I²C pull-ups to 3.3V.
 
 ---
 
@@ -99,8 +101,8 @@ Installation line drawing (see [`circuit-diagram.svg`](circuit-diagram.svg)):
    - Stick **Foil Strip A** vertically along the tank height, extending from 1 inch above the bottom floor up to the 30-inch max liquid level line.
    - Stick **Foil Strip B** parallel to Strip A, maintaining a uniform **1.5 to 2.0-inch gap** between the edges of the two strips.
 3. **Wiring Connections:**
-   - Solder an insulated wire lead to the top of **Foil Strip A** and route to **ESP32 GPIO4**.
-   - Solder an insulated wire lead to the top of **Foil Strip B** and route to **ESP32 GND**.
+   - Solder an insulated wire lead to the top of **Foil Strip A** and route to **FDC1004 CIN1**.
+   - Solder an insulated wire lead to the top of **Foil Strip B** and route to **FDC1004 SHLD** (driven shield).
    - Coat solder joints with liquid electrical tape to prevent moisture-induced surface oxidation or stray capacitance bridges.
 
 ---
@@ -111,16 +113,18 @@ This project uses [ESPHome](https://esphome.io): a YAML configuration that the `
 
 | File | Purpose |
 | :--- | :--- |
-| `esphome.yaml` | Canonical device configuration: board, Wi-Fi, API, OTA, touch sensor, smoothing, and the calibrated level calculation. |
+| `esphome.yaml` | Canonical device configuration: board, Wi-Fi, API, OTA, FDC1004 capacitance sensor, smoothing, and the calibrated level calculation. |
 | `secrets.yaml` | Your real Wi-Fi credentials, fallback-AP credentials, and API encryption key. **Gitignored** — real secrets are never committed. |
+| `components/fdc1004/` | Custom ESPHome external component (I²C driver) for the FDC1004 capacitance sensor. |
+| `circuit-diagram.svg` | Installation wiring line drawing (rendered in §3). |
 
 ### Key configuration points
 
-- **Sensor read:** `esp32_touch` on `GPIO4` (touch pad `T0`). On current ESPHome the touch platform ships as a `binary_sensor` only (the old continuous `sensor: esp32_touch` platform was removed), so we read its **raw value** through the public `get_value()` method inside a `template` sensor lambda (`update_interval: 2s`). The touch pad is exposed as a `binary_sensor` (`blackwater_touch`, hidden) purely as a handle to that raw reading.
+- **Capacitance sensor:** a `fdc1004` sensor platform (I²C, channel 1) reads Foil A capacitance via **CIN1**, with Foil B tied to **SHLD** (driven shield) for noise immunity. It's backed by a small, self-contained custom component in this repo (`components/fdc1004`), loaded via `external_components` — this replaces the noisy, unreliable ESP32 internal touch pad.
 - **Slosh filtering:** `sliding_window_moving_average` (window `15`, send every `3`) on the raw reading smooths values while the boat/RV is moving.
 - **Level calculation:** a `template` sensor maps raw capacitance → 0–100% using the substitutions `cal_raw_empty` / `cal_raw_full`. It is driven from the raw sensor's `on_value` trigger so the level updates as soon as a filtered reading is published (no 60 s polling lag).
 - **Calibration** values are top-level `substitutions` in `esphome.yaml` for a one-line edit — no need to edit the C++ lambda (see §6).
-- **Reading direction:** on original ESP32 (v1), a larger capacitance (more liquid) **decreases** the raw touch value. Two-point calibration handles this automatically — just record the true values for empty and full.
+- **Reading direction:** the FDC1004 raw value rises with capacitance as the tank fills. Two-point calibration handles it automatically — just record the true values for empty and full.
 - **`device_class`:** ESPHome no longer exposes `device_class: fill`; the level is still presented as a percentage via `unit_of_measurement: %`.
 - **Fallback AP:** `wifi.ap` plus a `captive_portal:` so the hotspot is usable for troubleshooting if the main Wi-Fi drops.
 
